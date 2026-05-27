@@ -1,8 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const cron = require('node-cron');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -10,15 +10,6 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// Connect to In-Memory MongoDB (no installation needed!)
-async function startDB() {
-    const mongod = await MongoMemoryServer.create();
-    const uri = mongod.getUri();
-    await mongoose.connect(uri);
-    console.log('✅ In-Memory MongoDB connected at', uri);
-}
-startDB().catch(err => console.error('❌ DB error:', err));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -68,6 +59,15 @@ app.get('/', (req, res) => {
     res.json({ message: 'Project Management API is running' });
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-});
+// Connect to MongoDB Atlas and start server
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => {
+        console.log('✅ MongoDB Atlas connected successfully');
+        app.listen(PORT, () => {
+            console.log(`🚀 Server running on port ${PORT}`);
+        });
+    })
+    .catch((err) => {
+        console.error('❌ MongoDB connection failed:', err.message);
+        process.exit(1);
+    });
